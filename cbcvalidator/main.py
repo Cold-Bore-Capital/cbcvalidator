@@ -4,23 +4,22 @@ import pandas as pd
 from tabulate import tabulate
 
 
-class Validate():
+class Validate:
 
     def __init__(self, test_mode=False):
         self._test_mode = test_mode
 
-    def validate(self, df: pd.DataFrame, validation_dict: dict) -> Tuple[pd.DataFrame, Union[str, None]]:
+    def validate(self, df: pd.DataFrame, validation_rules: list) -> Tuple[pd.DataFrame, Union[str, None]]:
         """
         Validates field in a dataframe as specified by the validation_dict.
 
         :param df: A dataframe to validate.
-        :param validation_dict: A dict containing validation parameters. All validation params are optional.
-        {'column_name': {'min_len': 5,
-                         'max_len': 10,
-                         'min_val': 2,
-                         'max_val': 150,
-                         'action': 'action_name'}
-        }
+        :param validation_rules: A dict containing validation parameters. All validation params are optional.
+        [
+            {'col': 'a', 'min_val': 2, 'max_val': 7, 'action': 'null'},
+            {'col': 'b', 'max_len': 5, 'action': 'trim'},
+            {'col': 'b', 'min_len': 2, 'action': 'null'}
+        ]
 
         Possible action name values:
             raise. Default. Raises an exception.
@@ -33,7 +32,7 @@ class Validate():
         """
         original_df = df.copy()
         output_str = ""
-        for config in validation_dict:
+        for config in validation_rules:
             col = config['col']
             config_elements = config.keys()
             action = config.get('action')
