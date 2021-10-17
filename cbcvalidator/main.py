@@ -1,14 +1,15 @@
-from typing import Union
+from typing import Union, Tuple
 
 import pandas as pd
+from tabulate import tabulate
 
 
 class Validate():
 
-    def __init__(self):
-        pass
+    def __init__(self, test_mode=False):
+        self._test_mode = test_mode
 
-    def validate(self, df: pd.DataFrame, validation_dict: dict) -> pd.DataFrame:
+    def validate(self, df: pd.DataFrame, validation_dict: dict) -> Tuple[pd.DataFrame, Union[str, None]]:
         """
         Validates field in a dataframe as specified by the validation_dict.
 
@@ -26,15 +27,19 @@ class Validate():
             print. Prints an output to stdout.
             trim. For max string length, the string will be trimmed.
             null. Sets the value to None.
-        :return: The processed dataframe.
-        """
+        :return:
+           The processed dataframe and a string message with the details of out of range items or None.
 
+        """
+        original_df = df.copy()
+        output_str = ""
         for config in validation_dict:
             col = config['col']
             config_elements = config.keys()
             action = config.get('action')
-            alert = config.get('alert')
+            min_len = None
             max_len = None
+            min_val = None
             max_val = None
             # Check for bad configuration
             if ('min_val' in config_elements or 'max_val' in config_elements) and (
@@ -59,7 +64,15 @@ class Validate():
                 raise BadConfigurationError('No min or max values were set.')
 
             if mask.sum() > 0:
-                self._apply_action_numeric(action, alert, col, mask, series, max_len, max_val)
+                self._apply_action_numeric(action, col, mask, series, min_len, max_len, min_val, max_val)
+                current_output = self._build_output_msg(original_df, mask, col, action, min_val, max_val, min_len,
+                                                        max_len)
+                output_str = f'{output_str}+{current_output}'
+
+        if output_str != "":
+            return df, output_str
+        else:
+            return df, None
 
     @staticmethod
     def _validate_numeric(series: pd.Series,
@@ -109,18 +122,18 @@ class Validate():
 
     @staticmethod
     def _apply_action_numeric(action: str,
-                              alert: bool,
                               col: str,
                               mask: pd.Series.mask,
                               series: pd.Series,
+                              min_len: int,
                               max_len: int,
+                              min_val: int,
                               max_val: int) -> None:
         """
         Applies the specified action to the series.
 
         Args:
             action: The action to take on out of range values. Option are raise, print, trim (string only), null.
-            alert: Flag to indicate if an email alert should be sent about the out of range value.
             col: Name of the column being processed.
             mask:
             series:
@@ -128,16 +141,63 @@ class Validate():
             max_val:
 
         Returns:
-            None
+            None (series by ref)
         """
+        min_val_str = min_len if min_len else min_val
+        max_val_str = max_len if max_len else max_val
+
+        msg = f'The column {col} contained out of range numeric values \n' \
+              f'Limits - min: {min_val_str}  |  max: {max_val_str} \n' \
+              f' {series[mask]} \n'
         if action == 'raise':
-            raise ValueOutOfRange(f'The column {col} contained out of range numeric values \n {series[mask]}')
+            raise ValueOutOfRange(msg)
         elif action == 'print':
-            print(f'The column {col} contained out of range numeric values \n {series[mask]}')
+            print(msg)
         elif action == 'null':
             series.loc[mask] = None
         elif action == 'trim':
             series.loc[mask] = series.loc[mask].str.slice(0, max_len)
+
+    @staticmethod
+    def _build_output_msg(df: pd.DataFrame,
+                          mask: pd.DataFrame.mask,
+                          col: str,
+                          action: str,
+                          min_val: Union[int, float],
+                          max_val: Union[int, float],
+                          min_len: int,
+                          max_len: int) -> str:
+        """
+        Builds an output message suitable for email alert.
+
+        Args:
+            df:
+            mask:
+            col:
+            action:
+            min_val:
+            max_val:
+            min_len:
+            max_len:
+
+        Returns:
+            A string containing an output message in the format
+                Column "A" contained out of range values.
+                The limits were min_len: None | max_len: 10
+                Rows with out of range values:
+                Idx    Name              Age         Active
+                3      Areallylongname   23          True
+        """
+        column_str = f'Column "{col}" had {mask.sum()} values out of range.'
+        if min_val or max_val:
+            # Numeric based
+            limits_str = f'The numeric limits were min: {min_val}  |  max: {max_val}. Action taken: {action}.'
+        else:
+            limits_str = f'The string limits were min: {min_len}  |  max: {max_len}. Action taken: {action}.'
+
+        df_str = tabulate(df[mask], headers='keys', tablefmt='psql')
+
+        return f'{column_str}\n{limits_str}\n{df_str}\n\n'
 
 
 class BadConfigurationError(Exception):

@@ -1,6 +1,6 @@
 from unittest import TestCase
 import pandas as pd
-from cbcvalidator.main import Validate
+from cbcvalidator.main import Validate, ValueOutOfRange
 
 
 class TestValidate(TestCase):
@@ -17,11 +17,53 @@ class TestValidate(TestCase):
             {'col': 'b', 'min_len': 2, 'action': 'null'}
         ]
 
-        v.validate(df, val_dict)
+        df, msg = v.validate(df, val_dict)
 
         test = pd.isnull(df.loc[0, 'a'])
         self.assertTrue(test)
 
-        test = df.loc[0, 'b'].str.len()
+        test = len(df.loc[0, 'b'])
         golden = 5
         self.assertEqual(golden, test)
+
+
+        data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
+                'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
+        df = pd.DataFrame(data)
+        val_dict = [
+            {'col': 'a', 'max_val': 7, 'action': 'null'},
+            {'col': 'a', 'min_val': 3, 'action': 'print'},
+            {'col': 'b', 'max_len': 5, 'action': 'print'},
+            {'col': 'b', 'min_len': 3, 'action': 'null'}
+        ]
+
+        df, msg = v.validate(df, val_dict)
+
+        test = pd.isnull(df.loc[7, 'a'])
+        self.assertTrue(test)
+
+        test = pd.isnull(df.loc[2, 'b'])
+        self.assertTrue(test)
+
+
+        data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
+                'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
+        df = pd.DataFrame(data)
+        val_dict = [
+            {'col': 'a', 'max_val': 7, 'action': 'raise'},
+        ]
+
+        with self.assertRaises(ValueOutOfRange) as context:
+            df, msg = v.validate(df, val_dict)
+
+        # Test with no validation criteria matching.
+        data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
+                'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
+        df = pd.DataFrame(data)
+        val_dict = [
+            {'col': 'a', 'max_val': 99, 'action': 'null'},
+        ]
+
+        df, msg = v.validate(df, val_dict)
+
+        self.assertIsNone(msg)
