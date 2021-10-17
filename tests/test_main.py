@@ -67,3 +67,13 @@ class TestValidate(TestCase):
         df, msg = v.validate(df, val_dict)
 
         self.assertIsNone(msg)
+
+        # Check that fully empty series works.
+        data = {'a': [None, None, None, None, None, None, None, None]}
+        df = pd.DataFrame(data)
+        val_dict = [
+            {'col': 'a', 'max_val': 7, 'action': 'null'}
+        ]
+
+        df, msg = v.validate(df, val_dict)
+        # So long as this doesn't raise an error it's fine.

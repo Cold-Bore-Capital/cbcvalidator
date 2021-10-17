@@ -62,7 +62,7 @@ class Validate:
                 min_len = config.get('min_len')
                 max_len = config.get('max_len')
                 series = df[col]
-                if len(series) > 0 and series.sum() > 0:
+                if len(series) > 0 and series.notna().sum() > 0:
                     mask = self._validate_string(series, min_len, max_len)
                 else:
                     # Create an empty mask
