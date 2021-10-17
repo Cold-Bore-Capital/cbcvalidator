@@ -51,14 +51,22 @@ class Validate:
                 min_val = config.get('min_val')
                 max_val = config.get('max_val')
                 series = df[col]
-                mask = self._validate_numeric(series, min_val, max_val)
+                if len(series) > 0:
+                    mask = self._validate_numeric(series, min_val, max_val)
+                else:
+                    # Create an empty mask
+                    mask = pd.Series([0])
 
             elif 'min_len' in config_elements or 'max_len' in config_elements:
                 # String limits check
                 min_len = config.get('min_len')
                 max_len = config.get('max_len')
                 series = df[col]
-                mask = self._validate_string(series, min_len, max_len)
+                if len(series) > 0:
+                    mask = self._validate_string(series, min_len, max_len)
+                else:
+                    # Create an empty mask
+                    mask = pd.Series([0])
             else:
                 raise BadConfigurationError('No min or max values were set.')
 
@@ -66,7 +74,7 @@ class Validate:
                 self._apply_action_numeric(action, col, mask, series, min_len, max_len, min_val, max_val)
                 current_output = self._build_output_msg(original_df, mask, col, action, min_val, max_val, min_len,
                                                         max_len)
-                output_str = f'{output_str}+{current_output}'
+                output_str = f'{output_str}{current_output}'
 
         if output_str != "":
             return df, output_str
