@@ -6,7 +6,7 @@ from cbcvalidator.main import Validate, ValueOutOfRange
 class TestValidate(TestCase):
 
     def test_validate(self):
-        v = Validate()
+        v = Validate(verbose=True)
 
         data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
                 'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}

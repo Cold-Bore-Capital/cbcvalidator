@@ -6,8 +6,9 @@ from tabulate import tabulate
 
 class Validate:
 
-    def __init__(self, test_mode=False):
+    def __init__(self, verbose=False, test_mode=False):
         self._test_mode = test_mode
+        self._verbose = verbose
 
     def validate(self, df: pd.DataFrame, validation_rules: list) -> Tuple[pd.DataFrame, Union[str, None]]:
         """
@@ -71,7 +72,7 @@ class Validate:
                 raise BadConfigurationError('No min or max values were set.')
 
             if mask.sum() > 0:
-                self._apply_action_numeric(action, col, mask, series, min_len, max_len, min_val, max_val)
+                self._apply_action(action, col, mask, series, min_len, max_len, min_val, max_val, self._verbose)
                 current_output = self._build_output_msg(original_df, mask, col, action, min_val, max_val, min_len,
                                                         max_len)
                 output_str = f'{output_str}{current_output}'
@@ -128,14 +129,15 @@ class Validate:
         return mask
 
     @staticmethod
-    def _apply_action_numeric(action: str,
-                              col: str,
-                              mask: pd.Series.mask,
-                              series: pd.Series,
-                              min_len: int,
-                              max_len: int,
-                              min_val: int,
-                              max_val: int) -> None:
+    def _apply_action(action: str,
+                      col: str,
+                      mask: pd.Series.mask,
+                      series: pd.Series,
+                      min_len: int,
+                      max_len: int,
+                      min_val: int,
+                      max_val: int,
+                      verbose: bool = False) -> None:
         """
         Applies the specified action to the series.
 
@@ -162,8 +164,12 @@ class Validate:
             print(msg)
         elif action == 'null':
             series.loc[mask] = None
+            if verbose:
+                print(msg)
         elif action == 'trim':
             series.loc[mask] = series.loc[mask].str.slice(0, max_len)
+            if verbose:
+                print(msg)
 
     @staticmethod
     def _build_output_msg(df: pd.DataFrame,
