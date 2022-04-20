@@ -64,7 +64,7 @@ class Validate:
                 max_len = config.get('max_len')
                 series = df[col]
                 if len(series) > 0 and series.notna().sum() > 0:
-                    mask = self._validate_string(series, min_len, max_len)
+                    mask = self._validate_string(series, min_len, max_len, col)
                 else:
                     # Create an empty mask
                     mask = pd.Series([0])
@@ -107,26 +107,34 @@ class Validate:
 
     @staticmethod
     def _validate_string(series: pd.Series,
-                         min_len: Union[int, float],
-                         max_len: Union[int, float]) -> pd.Series.mask:
+                         min_len: Union[int, float, None],
+                         max_len: Union[int, float, None],
+                         col: str) -> pd.Series.mask:
         """
         Validates string columns based on validation dict.
 
         Args:
-            series:
-            min_len:
-            max_len:
+            series: Series to process
+            min_len: Min len
+            max_len: Max len
+            col: The name of the column
 
         Returns:
-
+            A mask of values outside range.
         """
-        if min_len and max_len:
-            mask = (series.str.len() < min_len) | (series.str.len() > max_len)
-        elif max_len:
-            mask = series.str.len() > max_len
+        # Put this try except here to catch non str series processed as string.
+        if series.dtype == object:
+            if min_len and max_len:
+                mask = (series.str.len() < min_len) | (series.str.len() > max_len)
+            elif max_len:
+                mask = series.str.len() > max_len
+            else:
+                mask = series.str.len() < min_len
+            return mask
         else:
-            mask = series.str.len() < min_len
-        return mask
+            # Return as an empty mask if not a string series
+            print(f'The column {col} was processed as a string, but was not a str datatype.')
+            return pd.Series([0])
 
     @staticmethod
     def _apply_action(action: str,
@@ -218,4 +226,8 @@ class BadConfigurationError(Exception):
 
 
 class ValueOutOfRange(Exception):
+    pass
+
+
+class SeriesNotString(Exception):
     pass
