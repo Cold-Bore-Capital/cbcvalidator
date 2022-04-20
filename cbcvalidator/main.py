@@ -70,7 +70,7 @@ class Validate:
                         # Create an empty mask
                         mask = pd.Series([0])
                 else:
-                    print(f'Column {col} not found in dataframe. Bypassing.')
+                    print(f'Column {col} not found in dataframe. Bypassing column.')
                     mask = None
             else:
                 raise BadConfigurationError('No min or max values were set.')
