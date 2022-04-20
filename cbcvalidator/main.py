@@ -62,20 +62,24 @@ class Validate:
                 # String limits check
                 min_len = config.get('min_len')
                 max_len = config.get('max_len')
-                series = df[col]
-                if len(series) > 0 and series.notna().sum() > 0:
-                    mask = self._validate_string(series, min_len, max_len, col)
+                if col in df.columns:
+                    series = df[col]
+                    if len(series) > 0 and series.notna().sum() > 0:
+                        mask = self._validate_string(series, min_len, max_len, col)
+                    else:
+                        # Create an empty mask
+                        mask = pd.Series([0])
                 else:
-                    # Create an empty mask
-                    mask = pd.Series([0])
+                    print(f'Column {col} not found in dataframe. Bypassing.')
+                    mask = None
             else:
                 raise BadConfigurationError('No min or max values were set.')
-
-            if mask.sum() > 0:
-                self._apply_action(action, col, mask, series, min_len, max_len, min_val, max_val, self._verbose)
-                current_output = self._build_output_msg(original_df, mask, col, action, min_val, max_val, min_len,
-                                                        max_len)
-                output_str = f'{output_str}{current_output}'
+            if isinstance(mask, pd.Series):
+                if mask.sum() > 0:
+                    self._apply_action(action, col, mask, series, min_len, max_len, min_val, max_val, self._verbose)
+                    current_output = self._build_output_msg(original_df, mask, col, action, min_val, max_val, min_len,
+                                                            max_len)
+                    output_str = f'{output_str}{current_output}'
 
         if output_str != "":
             return df, output_str

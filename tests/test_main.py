@@ -90,3 +90,17 @@ class TestValidate(TestCase):
         df, msg = v.validate(df, val_dict)
         test = df.loc[0, 'a']
         self.assertEqual(1, test)
+
+        # Test for a missing column
+        data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
+                'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
+        df = pd.DataFrame(data)
+        val_dict = [
+            {'col': 'not_a_col_name', 'min_len': 2, 'max_len': 7, 'action': 'trim'}
+        ]
+
+        df, msg = v.validate(df, val_dict)
+        test = df.loc[0, 'a']
+        self.assertEqual(1, test)
+
+
