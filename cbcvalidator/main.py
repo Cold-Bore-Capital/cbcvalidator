@@ -101,12 +101,13 @@ class Validate:
         Returns:
             A mask indicating out of range values.
         """
-        if min_val and max_val:
+        if (min_val is not None or min_val == 0) and (max_val is not None or max_val == 0):
             mask = (series < min_val) | (series > max_val)
-        elif max_val:
+        elif max_val is not None or max_val == 0:
             mask = series >= max_val
-        else:
+        elif min_val is not None or min_val == 0:
             mask = series <= min_val
+
         return mask
 
     @staticmethod
@@ -128,12 +129,13 @@ class Validate:
         """
         # Put this try except here to catch non str series processed as string.
         if series.dtype == object:
-            if min_len and max_len:
+            if (min_len is not None or min_len == 0) and (max_len is not None or max_len == 0):
                 mask = (series.str.len() < min_len) | (series.str.len() > max_len)
-            elif max_len:
+            elif max_len is not None or max_len == 0:
                 mask = series.str.len() > max_len
-            else:
+            elif min_len is not None or min_len == 0:
                 mask = series.str.len() < min_len
+
             return mask
         else:
             # Return as an empty mask if not a string series
@@ -234,4 +236,8 @@ class ValueOutOfRange(Exception):
 
 
 class SeriesNotString(Exception):
+    pass
+
+
+class MissingConfiguration(Exception):
     pass

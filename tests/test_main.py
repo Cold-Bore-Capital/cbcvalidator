@@ -2,7 +2,7 @@ from unittest import TestCase
 
 import pandas as pd
 
-from cbcvalidator.main import Validate, ValueOutOfRange
+from cbcvalidator.main import Validate, ValueOutOfRange, BadConfigurationError
 
 
 class TestValidate(TestCase):
@@ -15,6 +15,21 @@ class TestValidate(TestCase):
         df = pd.DataFrame(data)
         val_dict = [
             {'col': 'a', 'min_val': 2, 'max_val': 7, 'action': 'null'},
+            {'col': 'b', 'max_len': 5, 'action': 'trim'},
+            {'col': 'b', 'min_len': 2, 'action': 'null'}
+        ]
+
+        df, msg = v.validate(df, val_dict)
+
+        test = pd.isnull(df.loc[0, 'a'])
+        self.assertTrue(test)
+
+        # Test zero value limit (zero's eval to False)
+        data = {'a': [-1, 2, 3, 4, 5, 6, 7, 8],
+                'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
+        df = pd.DataFrame(data)
+        val_dict = [
+            {'col': 'a', 'min_val': 0, 'max_val': 7, 'action': 'null'},
             {'col': 'b', 'max_len': 5, 'action': 'trim'},
             {'col': 'b', 'min_len': 2, 'action': 'null'}
         ]
@@ -46,6 +61,7 @@ class TestValidate(TestCase):
         test = pd.isnull(df.loc[2, 'b'])
         self.assertTrue(test)
 
+        # Test value out of range raises
         data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
                 'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
         df = pd.DataFrame(data)
@@ -103,4 +119,13 @@ class TestValidate(TestCase):
         test = df.loc[0, 'a']
         self.assertEqual(1, test)
 
+        # Test value out of range raises
+        data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
+                'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
+        df = pd.DataFrame(data)
+        val_dict = [
+            {'col': 'a', 'action': 'trim'},
+        ]
 
+        with self.assertRaises(BadConfigurationError) as context:
+            df, msg = v.validate(df, val_dict)
