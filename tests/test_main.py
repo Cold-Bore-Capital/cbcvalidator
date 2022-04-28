@@ -133,16 +133,16 @@ class TestValidate(TestCase):
             df, msg = v.validate(df, val_dict)
 
     def test__validate_date(self):
+        # ****************
+        # Check max dates
+        # ****************
         v = Validate()
         dates = []
         for i in range(5):
             dates.append(f'2022-01-{i + 1}')
-        series = pd.Series(dates)
-        series = pd.to_datetime(series)
-        # max_date = datetime(2022, 1, 3)
-        max_date = pd.Timestamp(2022, 1, 3)
-
-        timezone_str = 'America/Chicago'
+        series = pd.to_datetime(pd.Series(dates))
+        max_date = datetime(2022, 1, 3)
+        timezone_str = None
         mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
         self.assertTrue(mask[0])
         self.assertFalse(mask[3])
@@ -158,6 +158,134 @@ class TestValidate(TestCase):
         mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
         self.assertTrue(mask[0])
         self.assertFalse(mask[3])
+
+        # Check relative dates
+        dates = []
+        now = datetime.now()
+        for i in range(5):
+            test_date = now + timedelta(days=i)
+            dates.append(test_date)
+        series = pd.Series(dates)
+        max_date = 'tomorrow'
+        timezone_str = None
+        mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[2])
+
+        # Check relative dates with an offset
+        dates = []
+        now = datetime.now()
+        for i in range(5):
+            test_date = now + timedelta(days=i) - timedelta(days=3) # putting it in range of yesterday
+            dates.append(test_date)
+        series = pd.Series(dates)
+        max_date = 'yesterday'
+        max_offset = -1
+        timezone_str = None
+        mask = v._validate_date(series, None, max_date, None, max_offset, timezone_str, '0')
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[2])
+
+        # ****************
+        # Check min dates
+        # ****************
+        v = Validate()
+        dates = []
+        for i in range(5):
+            dates.append(f'2022-01-{i + 1}')
+        series = pd.to_datetime(pd.Series(dates))
+        min_date = datetime(2022, 1, 3)
+        timezone_str = None
+        mask = v._validate_date(series, min_date, None, None, None, timezone_str, '0')
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[3])
+
+        # unit test to check if time zone aware series is passed
+        dates = []
+        for i in range(5):
+            dates.append(datetime(2022, 1, i + 1, tzinfo=pytz.timezone('US/Central')))
+        series = pd.Series(dates)
+        min_date = datetime(2022, 1, 3)
+        timezone_str = 'US/Central'
+        mask = v._validate_date(series, min_date, None, None, None, timezone_str, '0')
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[2])
+
+        # Check relative dates
+        dates = []
+        now = datetime.now()
+        for i in range(5):
+            test_date = now + timedelta(days=i)
+            dates.append(test_date)
+        series = pd.Series(dates)
+        min_date = 'tomorrow'
+        timezone_str = None
+        mask = v._validate_date(series, min_date, None, None, None, timezone_str, '0')
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[2])
+
+        # Check relative dates with an offset
+        dates = []
+        now = datetime.now()
+        for i in range(5):
+            test_date = now + timedelta(days=i)
+            dates.append(test_date)
+        series = pd.Series(dates)
+        min_date = 'yesterday'
+        min_offset = 2
+        timezone_str = None
+        mask = v._validate_date(series, min_date, None, min_offset, None, timezone_str, '0')
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[2])
+
+        # ****************
+        # Check min and max dates
+        # ****************
+        v = Validate()
+        dates = []
+        for i in range(5):
+            dates.append(f'2022-01-{i + 1}')
+        series = pd.to_datetime(pd.Series(dates))
+        min_date = datetime(2022, 1, 2)
+        max_date = datetime(2022, 1, 3)
+        timezone_str = None
+        mask = v._validate_date(series, min_date, max_date, None, None, timezone_str, '0')
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[1])
+        self.assertTrue(mask[2])
+        self.assertFalse(mask[3])
+        self.assertFalse(mask[4])
+
+        # ****************
+        # Check non datetime column
+        # ****************
+        not_dates = []
+        for i in range(5):
+            not_dates.append(f'abc-{i}')
+        series = pd.Series(not_dates)
+        min_date = datetime(2022, 1, 2)
+        max_date = datetime(2022, 1, 3)
+        timezone_str = None
+        mask = v._validate_date(series, min_date, max_date, None, None, timezone_str, '0')
+        test = mask.sum()
+        self.assertEqual(0, test)
+
+        # ****************
+        # Check raises error on bad offset
+        # ****************
+        dates = []
+        now = datetime.now()
+        for i in range(5):
+            test_date = now + timedelta(days=i)
+            dates.append(test_date)
+        series = pd.Series(dates)
+        min_date = 'a_bad_input'
+        min_offset = 2
+        timezone_str = None
+        with self.assertRaises(BadConfigurationError) as context:
+            mask = v._validate_date(series, min_date, None, min_offset, None, timezone_str, '0')
+
+
 
         a = 0
 

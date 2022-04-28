@@ -1,10 +1,10 @@
 from datetime import date, datetime, timedelta
-from pytz import timezone
+from dateutil.parser import parse
 from typing import Union, Tuple
 
 import pandas as pd
-import numpy as np
 from pandas.api.types import is_datetime64_ns_dtype
+from pytz import timezone
 from tabulate import tabulate
 
 today = date.today()
@@ -185,6 +185,21 @@ class Validate:
                        max_date_offset: int,
                        tz: str,
                        col: str) -> pd.Series.mask:
+        """
+        *** Fill in documentation ***
+
+        Args:
+            series:
+            min_date:
+            max_date:
+            min_date_offset:
+            max_date_offset:
+            tz:
+            col:
+
+        Returns:
+
+        """
         mask = None
 
         if not is_datetime64_ns_dtype(series):
@@ -194,15 +209,31 @@ class Validate:
 
         # deal with relative dates and offsets
         rel_date = ['today', 'yesterday', 'tomorrow']
-        if min_date in rel_date:
-            min_date = self._convert_rel_date(min_date)
-            if min_date_offset:
-                min_date = min_date + timedelta(days=min_date_offset)
+        if isinstance(min_date, str):
+            if min_date in rel_date:
+                min_date = self._convert_rel_date(min_date)
+                if min_date_offset:
+                    min_date = min_date + timedelta(days=min_date_offset)
+            else:
+                # assume a date was passed in that needs converting
+                try:
+                    min_date = parse(min_date)
+                except:
+                    raise BadConfigurationError(
+                        f'The min_date value {min_date} is not a valid relative date measure or limit')
 
-        if max_date in rel_date:
-            max_date = self._convert_rel_date(max_date)
-            if max_date_offset:
-                max_date = max_date + timedelta(days=max_date_offset)
+        if isinstance(max_date, str):
+            if max_date in rel_date:
+                max_date = self._convert_rel_date(max_date)
+                if max_date_offset:
+                    max_date = max_date + timedelta(days=max_date_offset)
+            else:
+                # assume a date was passed in that needs converting
+                try:
+                    max_date = parse(max_date)
+                except:
+                    raise BadConfigurationError(
+                        f'The max_date value {max_date} is not a valid relative date measure or limit')
 
         # deal with timezones
         if tz:
