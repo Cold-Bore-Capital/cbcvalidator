@@ -1,7 +1,13 @@
+from datetime import date, datetime, timedelta
+from pytz import timezone
 from typing import Union, Tuple
 
 import pandas as pd
+import numpy as np
+from pandas.api.types import is_datetime64_ns_dtype
 from tabulate import tabulate
+
+today = date.today()
 
 
 class Validate:
@@ -17,16 +23,32 @@ class Validate:
         :param df: A dataframe to validate.
         :param validation_rules: A dict containing validation parameters. All validation params are optional.
         [
-            {'col': 'a', 'min_val': 2, 'max_val': 7, 'action': 'null'},
-            {'col': 'b', 'max_len': 5, 'action': 'trim'},
-            {'col': 'b', 'min_len': 2, 'action': 'null'}
+            {'col': 'numeric_ex', 'min_val': 2, 'max_val': 7, 'action': 'null'},
+            {'col': 'string_ex_trim', 'max_len': 5, 'action': 'trim'},
+            {'col': 'string_ex_null', 'min_len': 2, 'action': 'null'},
+            {'col': 'date_ex_max', 'max_date': 'today', 'max_date_offset': -2, 'tz': 'America/Chicago', 'action': 'null'},
+            # {'col': 'date_ex_min', 'min_date': '2020-01-01', 'action': 'null'},
         ]
 
-        Possible action name values:
+        # Actions
+        ## Possible action name values:
             raise. Default. Raises an exception.
             print. Prints an output to stdout.
             trim. For max string length, the string will be trimmed.
             null. Sets the value to None.
+
+        # Dates
+        ## Possible date offsets:
+            today. Not greater than or less than current date.
+            yesterday. current date - 1
+            tomorrow. current date + 1
+
+        ## Max date offset:
+            Allows an addition or subtraction of days from a relative date.
+
+        ## Timezone:
+            Default is UTC, user can specify any pytz acceptable timezone.
+
         :return:
            The processed dataframe and a string message with the details of out of range items or None.
 
@@ -37,43 +59,36 @@ class Validate:
             col = config['col']
             config_elements = config.keys()
             action = config.get('action')
-            min_len = None
-            max_len = None
-            min_val = None
-            max_val = None
-            # Check for bad configuration
-            if ('min_val' in config_elements or 'max_val' in config_elements) and (
-                    'min_len' in config_elements or 'max_len' in config_elements):
-                raise BadConfigurationError(f'Error in configuration for column {col}. You cannot set both numeric and '
-                                            f'string values for a single column.')
 
-            if 'min_val' in config_elements or 'max_val' in config_elements:
-                # Numeric limits check
-                min_val = config.get('min_val')
-                max_val = config.get('max_val')
+            min_len = config.get('min_len')
+            max_len = config.get('max_len')
+            min_val = config.get('min_val')
+            max_val = config.get('max_val')
+            min_date = config.get('min_date')
+            max_date = config.get('max_date')
+            max_date_offset = config.get('max_date_offset')
+            tz = config.get('tz')
+
+            self._check_rule_config(col, config_elements)
+
+            if col in df.columns:
                 series = df[col]
-                if len(series) > 0:
-                    mask = self._validate_numeric(series, min_val, max_val)
-                else:
-                    # Create an empty mask
-                    mask = pd.Series([0])
-
-            elif 'min_len' in config_elements or 'max_len' in config_elements:
-                # String limits check
-                min_len = config.get('min_len')
-                max_len = config.get('max_len')
-                if col in df.columns:
-                    series = df[col]
-                    if len(series) > 0 and series.notna().sum() > 0:
+                if len(series) > 0 and series.notna().sum() > 0:
+                    if 'min_val' in config_elements or 'max_val' in config_elements:
+                        # Numeric limit checks
+                        mask = self._validate_numeric(series, min_val, max_val)
+                    elif 'min_len' in config_elements or 'max_len' in config_elements:
                         mask = self._validate_string(series, min_len, max_len, col)
+                    elif 'min_date' in config_elements or 'max_date' in config_elements:
+                        mask = self._validate_date(series, min_date, max_date, max_date_offset, tz, col)
                     else:
-                        # Create an empty mask
-                        mask = pd.Series([0])
+                        raise BadConfigurationError('No min or max values were set.')
                 else:
-                    print(f'Column {col} not found in dataframe. Bypassing column.')
-                    mask = None
+                    mask = pd.Series([0])
             else:
-                raise BadConfigurationError('No min or max values were set.')
+                print(f'Column {col} not found in dataframe. Bypassing column.')
+                mask = None
+
             if isinstance(mask, pd.Series):
                 if mask.sum() > 0:
                     self._apply_action(action, col, mask, series, min_len, max_len, min_val, max_val, self._verbose)
@@ -87,16 +102,35 @@ class Validate:
             return df, None
 
     @staticmethod
+    def _check_rule_config(col: str, config_elements: list) -> None:
+        """
+         Checks for config errors in validation rules
+        Args:
+            col:
+            config_elements:
+
+        Returns: None
+
+        """
+        # Check for bad configuration
+        numeric_check = 1 if ('min_val' in config_elements or 'max_val' in config_elements) else 0
+        string_check = 1 if ('min_len' in config_elements or 'max_len' in config_elements) else 0
+        date_check = 1 if ('min_date' in config_elements or 'max_date' in config_elements) else 0
+        if numeric_check + string_check + date_check > 1:
+            raise BadConfigurationError(f'Error in configuration for column {col}. You cannot set both numeric, '
+                                        f'string, and/or date values for a single column.')
+
+    @staticmethod
     def _validate_numeric(series: pd.Series,
                           min_val: Union[int, float],
                           max_val: Union[int, float]) -> pd.Series.mask:
         """
-        Validates numeric columns based on validation dict. 
-        
+        Validates numeric columns based on validation dict.
+
         Args:
-            series: 
-            min_val: 
-            max_val: 
+            series:
+            min_val:
+            max_val:
 
         Returns:
             A mask indicating out of range values.
@@ -127,6 +161,7 @@ class Validate:
         Returns:
             A mask of values outside range.
         """
+        mask = None
         # Put this try except here to catch non str series processed as string.
         if series.dtype == object:
             if (min_len is not None or min_len == 0) and (max_len is not None or max_len == 0):
@@ -141,6 +176,78 @@ class Validate:
             # Return as an empty mask if not a string series
             print(f'The column {col} was processed as a string, but was not a str datatype.')
             return pd.Series([0])
+
+    def _validate_date(self,
+                       series: pd.Series,
+                       min_date: Union[datetime, str],
+                       max_date: Union[datetime, str],
+                       min_date_offset: int,
+                       max_date_offset: int,
+                       tz: str,
+                       col: str) -> pd.Series.mask:
+        mask = None
+
+        if not is_datetime64_ns_dtype(series):
+            # Return as an empty mask if not a datetime series
+            print(f'The column {col} was processed as a datetime, but was not a datetime datatype.')
+            return pd.Series([0])
+
+        # deal with relative dates and offsets
+        rel_date = ['today', 'yesterday', 'tomorrow']
+        if min_date in rel_date:
+            min_date = self._convert_rel_date(min_date)
+            if min_date_offset:
+                min_date = min_date + timedelta(days=min_date_offset)
+
+        if max_date in rel_date:
+            max_date = self._convert_rel_date(max_date)
+            if max_date_offset:
+                max_date = max_date + timedelta(days=max_date_offset)
+
+        # deal with timezones
+        if tz:
+            _tz = timezone(tz)
+            if min_date:
+                min_date = min_date.replace(tzinfo=_tz)
+            if max_date:
+                max_date = max_date.replace(tzinfo=_tz)
+
+        # if min_date:
+        #     min_date = np.datetime64(min_date)
+        #
+        # if max_date:
+        #     max_date = np.datetime64(max_date)
+
+        if min_date is not None and max_date is not None:
+            mask = (series >= min_date) & (series <= max_date)
+        elif max_date is not None:
+            mask = series <= max_date
+        elif min_date is not None:
+            mask = series >= min_date
+        return mask
+
+    @staticmethod
+    def _convert_rel_date(rel_str: str) -> datetime:
+        """
+         Converts a relative date like today to an actual date
+        Args:
+            rel_str: relative date options are today, tomorrow, yesterday
+
+        Returns:
+            A datetime
+
+        """
+
+        now = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0)
+        if rel_str == 'today':
+            pass
+        elif rel_str == 'tomorrow':
+            now = now + timedelta(days=1)
+        elif rel_str == 'yesterday':
+            now = now - timedelta(days=1)
+        else:
+            raise BadConfigurationError(f'The relative date value {rel_str} is invalid')
+        return now
 
     @staticmethod
     def _apply_action(action: str,

@@ -1,6 +1,8 @@
 from unittest import TestCase
+from datetime import datetime, timedelta
 
 import pandas as pd
+import pytz
 
 from cbcvalidator.main import Validate, ValueOutOfRange, BadConfigurationError
 
@@ -129,3 +131,54 @@ class TestValidate(TestCase):
 
         with self.assertRaises(BadConfigurationError) as context:
             df, msg = v.validate(df, val_dict)
+
+    def test__validate_date(self):
+        v = Validate()
+        dates = []
+        for i in range(5):
+            dates.append(f'2022-01-{i + 1}')
+        series = pd.Series(dates)
+        series = pd.to_datetime(series)
+        # max_date = datetime(2022, 1, 3)
+        max_date = pd.Timestamp(2022, 1, 3)
+
+        timezone_str = 'America/Chicago'
+        mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[3])
+
+
+        # unit test to check if time zone aware series is passed
+        dates = []
+        for i in range(5):
+            dates.append(datetime(2022, 1, i + 1, tzinfo=pytz.timezone('US/Central')))
+        series = pd.Series(dates)
+        max_date = datetime(2022, 1, 3)
+        timezone_str = 'US/Central'
+        mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[3])
+
+        a = 0
+
+    def test__convert_rel_date(self):
+        v = Validate()
+        rel_str = 'today'
+        test = v._convert_rel_date(rel_str)
+        golden = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0)
+        self.assertEqual(golden, test)
+
+        rel_str = 'yesterday'
+        test = v._convert_rel_date(rel_str)
+        golden = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0) - timedelta(days=1)
+        self.assertEqual(golden, test)
+
+        rel_str = 'tomorrow'
+        test = v._convert_rel_date(rel_str)
+        golden = datetime.now().replace(hour=23, minute=59, second=59, microsecond=0) + timedelta(days=1)
+        self.assertEqual(golden, test)
+
+        # Check BadConfigurationError
+        with self.assertRaises(BadConfigurationError) as context:
+            rel_str = 'abc'
+            test = v._convert_rel_date(rel_str)
