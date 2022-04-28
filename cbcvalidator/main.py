@@ -38,16 +38,24 @@ class Validate:
             null. Sets the value to None.
 
         # Dates
-        ## Possible date offsets:
+        ## Min and Max Date
+        Date limits can be passed in as either a string `'2022-03-04'` or as a datetime `datetime(2022-03-04)`. Limits
+        can also be set to relative values as described below
+
+        ###  Possible date offsets:
             today. Not greater than or less than current date.
             yesterday. current date - 1
             tomorrow. current date + 1
 
-        ## Max date offset:
-            Allows an addition or subtraction of days from a relative date.
+        ## Date Offset:
+            Allows an addition or subtraction of days from a relative date. You can enter any integer. For example, if
+            a max date value was set to `tomorrow` and a max_dates_offset value was set to 1, the max limit would be
+            the day after tomorrow.
 
         ## Timezone:
-            Default is UTC, user can specify any pytz acceptable timezone.
+            Default is timezone unaware, user can specify any pytz acceptable timezone. If the series is tz aware, a
+            timezone value must be passed in, or the date limit values must be tz aware. Passing in a timezone value
+            will not convert the date limit, only make the limit tz aware.
 
         :return:
            The processed dataframe and a string message with the details of out of range items or None.
