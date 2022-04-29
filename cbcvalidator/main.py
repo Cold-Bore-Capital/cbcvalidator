@@ -75,6 +75,7 @@ class Validate:
             min_date = config.get('min_date')
             max_date = config.get('max_date')
             max_date_offset = config.get('max_date_offset')
+            min_date_offset = config.get('min_date_offset')
             tz = config.get('tz')
 
             self._check_rule_config(col, config_elements)
@@ -88,7 +89,7 @@ class Validate:
                     elif 'min_len' in config_elements or 'max_len' in config_elements:
                         mask = self._validate_string(series, min_len, max_len, col)
                     elif 'min_date' in config_elements or 'max_date' in config_elements:
-                        mask = self._validate_date(series, min_date, max_date, max_date_offset, tz, col)
+                        mask = self._validate_date(series, min_date, max_date, min_date_offset, max_date_offset, tz, col)
                     else:
                         raise BadConfigurationError('No min or max values were set.')
                 else:
