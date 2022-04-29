@@ -147,9 +147,9 @@ class Validate:
         if (min_val is not None or min_val == 0) and (max_val is not None or max_val == 0):
             mask = (series < min_val) | (series > max_val)
         elif max_val is not None or max_val == 0:
-            mask = series >= max_val
+            mask = series > max_val
         elif min_val is not None or min_val == 0:
-            mask = series <= min_val
+            mask = series < min_val
 
         return mask
 
@@ -254,11 +254,11 @@ class Validate:
 
 
         if min_date is not None and max_date is not None:
-            mask = (series >= min_date) & (series <= max_date)
+            mask = (series < min_date) | (series > max_date)
         elif max_date is not None:
-            mask = series <= max_date
+            mask = series > max_date
         elif min_date is not None:
-            mask = series >= min_date
+            mask = series < min_date
         return mask
 
     @staticmethod
