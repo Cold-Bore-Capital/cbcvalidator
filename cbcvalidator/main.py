@@ -251,11 +251,6 @@ class Validate:
             if max_date:
                 max_date = max_date.replace(tzinfo=_tz)
 
-        # if min_date:
-        #     min_date = np.datetime64(min_date)
-        #
-        # if max_date:
-        #     max_date = np.datetime64(max_date)
 
         if min_date is not None and max_date is not None:
             mask = (series >= min_date) & (series <= max_date)
@@ -293,10 +288,10 @@ class Validate:
                       col: str,
                       mask: pd.Series.mask,
                       series: pd.Series,
-                      min_len: int,
-                      max_len: int,
-                      min_val: int,
-                      max_val: int,
+                      min_len: Union[int,None],
+                      max_len: Union[int,None],
+                      min_val: Union[int,None],
+                      max_val: Union[int,None],
                       verbose: bool = False) -> None:
         """
         Applies the specified action to the series.
@@ -327,7 +322,7 @@ class Validate:
             if verbose:
                 print(msg)
         elif action == 'trim':
-            series.loc[mask] = series.loc[mask].str.slice(0, max_len)
+            series.loc[mask] = series.loc[mask].str.slice(0,max_len)
             if verbose:
                 print(msg)
 

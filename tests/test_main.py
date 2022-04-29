@@ -66,7 +66,7 @@ class TestValidate(TestCase):
         # Test value out of range raises
         data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
                 'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
-        df = pd.DataFrame(data)
+        df = pd.D vfataFrame(data)
         val_dict = [
             {'col': 'a', 'max_val': 7, 'action': 'raise'},
         ]
@@ -132,6 +132,38 @@ class TestValidate(TestCase):
         with self.assertRaises(BadConfigurationError) as context:
             df, msg = v.validate(df, val_dict)
 
+    def test__apply_action(self):
+        v = Validate(verbose=True)
+        # action = ['raise', 'print', 'trim', 'null']
+
+        data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
+                'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
+        df = pd.DataFrame(data)
+
+        # Test string
+        mask = df['b'] == 'abcdefghijkl'
+        action_str = 'trim'
+        series = df['b']
+        v._apply_action(action=action_str, col='b', mask=mask, series=series,
+                                         min_len=1, max_len=2, min_val=None, max_val=None,verbose=True)
+        self.assertEqual('ab', series[1])
+
+
+        # Test numeric
+        mask = df['a'] >= 6
+        action_str = 'null'
+        series = df['a']
+        v._apply_action(action=action_str, col='a', mask=mask, series=series,
+                        min_len=None, max_len=None, min_val=None, max_val=6,verbose=True)
+        self.assertEqual(3,series[2])
+        self.assertTrue(pd.isna(series[6]))
+
+        #Test raise
+        with self.assertRaises(ValueOutOfRange) as context:
+            action_str = 'raise'
+            v._apply_action(action=action_str, col='a', mask=mask, series=series,
+                            min_len=None, max_len=None, min_val=None, max_val=6,verbose=True)
+
     def test__validate_date(self):
         # ****************
         # Check max dates
@@ -146,7 +178,6 @@ class TestValidate(TestCase):
         mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
         self.assertTrue(mask[0])
         self.assertFalse(mask[3])
-
 
         # unit test to check if time zone aware series is passed
         dates = []
@@ -176,7 +207,7 @@ class TestValidate(TestCase):
         dates = []
         now = datetime.now()
         for i in range(5):
-            test_date = now + timedelta(days=i) - timedelta(days=3) # putting it in range of yesterday
+            test_date = now + timedelta(days=i) - timedelta(days=3)  # putting it in range of yesterday
             dates.append(test_date)
         series = pd.Series(dates)
         max_date = 'yesterday'
@@ -246,8 +277,8 @@ class TestValidate(TestCase):
         for i in range(5):
             dates.append(f'2022-01-{i + 1}')
         series = pd.to_datetime(pd.Series(dates))
-        min_date = datetime(2022, 1, 2)
-        max_date = datetime(2022, 1, 3)
+        min_date = "2022-01-02"
+        max_date = "2022-01-03"
         timezone_str = None
         mask = v._validate_date(series, min_date, max_date, None, None, timezone_str, '0')
         self.assertFalse(mask[0])
@@ -284,8 +315,6 @@ class TestValidate(TestCase):
         timezone_str = None
         with self.assertRaises(BadConfigurationError) as context:
             mask = v._validate_date(series, min_date, None, min_offset, None, timezone_str, '0')
-
-
 
         a = 0
 
