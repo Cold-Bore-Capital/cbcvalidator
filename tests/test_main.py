@@ -66,7 +66,7 @@ class TestValidate(TestCase):
         # Test value out of range raises
         data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
                 'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
-        df = pd.D vfataFrame(data)
+        df = pd.DataFrame(data)
         val_dict = [
             {'col': 'a', 'max_val': 7, 'action': 'raise'},
         ]
