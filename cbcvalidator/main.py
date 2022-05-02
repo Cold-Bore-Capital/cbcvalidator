@@ -194,19 +194,19 @@ class Validate:
                        tz: str,
                        col: str) -> pd.Series.mask:
         """
-        *** Fill in documentation ***
+       Validates date columns based on parameters
 
         Args:
-            series:
-            min_date:
-            max_date:
-            min_date_offset:
-            max_date_offset:
-            tz:
-            col:
+            series: series of dates
+            min_date: minimum date
+            max_date: maximum date
+            min_date_offset: offset value either +ve or -ve for minimum date
+            max_date_offset: offset value either +ve or -ve for maximum date
+            tz: time zone
+            col: the name of the column
 
         Returns:
-
+            A mask of values outside range
         """
         mask = None
 
@@ -339,14 +339,14 @@ class Validate:
         Builds an output message suitable for email alert.
 
         Args:
-            df:
-            mask:
-            col:
-            action:
-            min_val:
-            max_val:
-            min_len:
-            max_len:
+            df: dataframe to be validated
+            mask: mask of value indicating out of range
+            col: column name
+            action: action to be taken, 'null', 'print' or 'raise'
+            min_val: minimum value
+            max_val: maximum value
+            min_len: minimum length
+            max_len: maximum length
 
         Returns:
             A string containing an output message in the format

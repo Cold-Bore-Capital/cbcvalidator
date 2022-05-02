@@ -66,7 +66,7 @@ class TestValidate(TestCase):
         # Test value out of range raises
         data = {'a': [1, 2, 3, 4, 5, 6, 7, 8],
                 'b': ['abcdefg', 'abcdefghijkl', 'a', 'b', 'c', 'd', 'ef', 'ghi']}
-        df = pd.D vfataFrame(data)
+        df = pd.DataFrame(data)
         val_dict = [
             {'col': 'a', 'max_val': 7, 'action': 'raise'},
         ]
@@ -145,24 +145,23 @@ class TestValidate(TestCase):
         action_str = 'trim'
         series = df['b']
         v._apply_action(action=action_str, col='b', mask=mask, series=series,
-                                         min_len=1, max_len=2, min_val=None, max_val=None,verbose=True)
+                        min_len=1, max_len=2, min_val=None, max_val=None, verbose=True)
         self.assertEqual('ab', series[1])
-
 
         # Test numeric
         mask = df['a'] >= 6
         action_str = 'null'
         series = df['a']
         v._apply_action(action=action_str, col='a', mask=mask, series=series,
-                        min_len=None, max_len=None, min_val=None, max_val=6,verbose=True)
-        self.assertEqual(3,series[2])
+                        min_len=None, max_len=None, min_val=None, max_val=6, verbose=True)
+        self.assertEqual(3, series[2])
         self.assertTrue(pd.isna(series[6]))
 
-        #Test raise
+        # Test raise
         with self.assertRaises(ValueOutOfRange) as context:
             action_str = 'raise'
             v._apply_action(action=action_str, col='a', mask=mask, series=series,
-                            min_len=None, max_len=None, min_val=None, max_val=6,verbose=True)
+                            min_len=None, max_len=None, min_val=None, max_val=6, verbose=True)
 
     def test__validate_date(self):
         # ****************
