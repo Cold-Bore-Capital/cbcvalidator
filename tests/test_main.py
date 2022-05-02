@@ -132,6 +132,24 @@ class TestValidate(TestCase):
         with self.assertRaises(BadConfigurationError) as context:
             df, msg = v.validate(df, val_dict)
 
+        # Test dates
+
+        dates = []
+        for i in range(10):
+            dates.append(f'2022-01-{i + 1}')
+        df = pd.DataFrame({'dates': dates})
+        df.loc[:,'dates'] = pd.to_datetime(df.loc[:,'dates'])
+        val_dict = [
+            {'col': 'dates', 'min_date': '2022-01-02', 'max_date': '2022-01-05', 'max_date_offset': 2,
+             'tz': None, 'action': 'null'}
+        ]
+        df, msg = v.validate(df, val_dict)
+        self.assertTrue(pd.isna(df.loc[0, 'dates']))
+        self.assertTrue(pd.isna(df.loc[5, 'dates']))
+        self.assertEqual(datetime(2022,1,5), df.loc[4, 'dates'])
+
+
+
     def test__apply_action(self):
         v = Validate(verbose=True)
         # action = ['raise', 'print', 'trim', 'null']
@@ -175,8 +193,8 @@ class TestValidate(TestCase):
         max_date = datetime(2022, 1, 3)
         timezone_str = None
         mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
-        self.assertTrue(mask[0])
-        self.assertFalse(mask[3])
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[3])
 
         # unit test to check if time zone aware series is passed
         dates = []
@@ -186,8 +204,8 @@ class TestValidate(TestCase):
         max_date = datetime(2022, 1, 3)
         timezone_str = 'US/Central'
         mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
-        self.assertTrue(mask[0])
-        self.assertFalse(mask[3])
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[3])
 
         # Check relative dates
         dates = []
@@ -199,8 +217,8 @@ class TestValidate(TestCase):
         max_date = 'tomorrow'
         timezone_str = None
         mask = v._validate_date(series, None, max_date, None, None, timezone_str, '0')
-        self.assertTrue(mask[0])
-        self.assertFalse(mask[2])
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[2])
 
         # Check relative dates with an offset
         dates = []
@@ -213,8 +231,8 @@ class TestValidate(TestCase):
         max_offset = -1
         timezone_str = None
         mask = v._validate_date(series, None, max_date, None, max_offset, timezone_str, '0')
-        self.assertTrue(mask[0])
-        self.assertFalse(mask[2])
+        self.assertFalse(mask[0])
+        self.assertTrue(mask[2])
 
         # ****************
         # Check min dates
@@ -227,8 +245,8 @@ class TestValidate(TestCase):
         min_date = datetime(2022, 1, 3)
         timezone_str = None
         mask = v._validate_date(series, min_date, None, None, None, timezone_str, '0')
-        self.assertFalse(mask[0])
-        self.assertTrue(mask[3])
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[3])
 
         # unit test to check if time zone aware series is passed
         dates = []
@@ -238,8 +256,8 @@ class TestValidate(TestCase):
         min_date = datetime(2022, 1, 3)
         timezone_str = 'US/Central'
         mask = v._validate_date(series, min_date, None, None, None, timezone_str, '0')
-        self.assertFalse(mask[0])
-        self.assertTrue(mask[2])
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[3])
 
         # Check relative dates
         dates = []
@@ -251,8 +269,8 @@ class TestValidate(TestCase):
         min_date = 'tomorrow'
         timezone_str = None
         mask = v._validate_date(series, min_date, None, None, None, timezone_str, '0')
-        self.assertFalse(mask[0])
-        self.assertTrue(mask[2])
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[2])
 
         # Check relative dates with an offset
         dates = []
@@ -265,8 +283,8 @@ class TestValidate(TestCase):
         min_offset = 2
         timezone_str = None
         mask = v._validate_date(series, min_date, None, min_offset, None, timezone_str, '0')
-        self.assertFalse(mask[0])
-        self.assertTrue(mask[2])
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[2])
 
         # ****************
         # Check min and max dates
@@ -280,11 +298,11 @@ class TestValidate(TestCase):
         max_date = "2022-01-03"
         timezone_str = None
         mask = v._validate_date(series, min_date, max_date, None, None, timezone_str, '0')
-        self.assertFalse(mask[0])
-        self.assertTrue(mask[1])
-        self.assertTrue(mask[2])
-        self.assertFalse(mask[3])
-        self.assertFalse(mask[4])
+        self.assertTrue(mask[0])
+        self.assertFalse(mask[1])
+        self.assertFalse(mask[2])
+        self.assertTrue(mask[3])
+        self.assertTrue(mask[4])
 
         # ****************
         # Check non datetime column
